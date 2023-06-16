@@ -19,18 +19,14 @@ class Engine():
         self.pdf_handler = PDFHandler()
         self.model_handler = ModelHandler()
 
-    def index(self, file_id, filename, is_short=True, chunk_size=100):
+    def index(self, file_id, filename, is_short=True):
         if (is_short):
             documents = self.pdf_handler.online_process(file_id)
         else:
             documents = self.pdf_handler.offline_process(file_id)
+        
         texts = [doc['text'] for doc in documents]
-
-        embeddings = []
-        for chunk_start in range(0, len(texts), chunk_size):
-            chunk = texts[chunk_start:chunk_start+chunk_size]
-            chunk_embeddings = self.model_handler.encode(chunk)
-            embeddings.extend(chunk_embeddings)
+        embeddings = self.model_handler.encode(texts)
         
         for i in range(len(texts)):
             documents[i]['embedding'] = embeddings[i]

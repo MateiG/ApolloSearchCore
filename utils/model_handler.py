@@ -36,16 +36,21 @@ class ModelHandler():
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-    def encode(self, documents):
-        encoded_input = self.encoder_tokenizer(documents, padding=True, truncation=True, return_tensors='pt')
-
+    def encode(self, documents, chunk_size=100):
+        embeddings = []
         with torch.no_grad():
-            model_output = self.encoder_model(**encoded_input)
+            for chunk_start in range(0, len(documents), chunk_size):
+                chunk = documents[chunk_start:chunk_start+chunk_size]
+                encoded_input = self.encoder_tokenizer(chunk, padding=True, truncation=True, return_tensors='pt')
+                model_output = self.encoder_model(**encoded_input)
 
-        sentence_embeddings = self.mean_pooling(model_output, encoded_input['attention_mask'])
-        sentence_embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
+                chunk_embeddings = self.mean_pooling(model_output, encoded_input['attention_mask'])
+                chunk_embeddings = F.normalize(chunk_embeddings, p=2, dim=1)
 
-        return sentence_embeddings.cpu().numpy().tolist()
+                chunk_embeddings = chunk_embeddings.cpu().numpy().tolist()
+                embeddings.extend(chunk_embeddings)
+        
+        return embeddings
     
     def highlight(self, query, context, chars: int = 50):
         res = self.qa({'question': query, 'context': context})
