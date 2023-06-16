@@ -4,7 +4,6 @@ import threading
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 from werkzeug.utils import secure_filename
-from pypdf import PdfReader
 
 from utils.engine import Engine
 
@@ -61,8 +60,7 @@ def upload():
     })
     session['uploads'] = session_uploads
 
-    reader = PdfReader(save_path)
-    num_pages = len(reader.pages)
+    num_pages = engine.get_num_pages(file_id)
     if (num_pages <= 15):
         engine.index(file_id, filename, is_short=True)
     else:
@@ -79,7 +77,7 @@ def search():
     
     pdf_path = os.path.join('static/uploads/', file_id + '.pdf')
     filename = index['name']
-    return render_template('search.html', file_id=file_id, filename=filename, pdf_path=pdf_path, adobe_key=os.getenv('ADOBE_KEY'))
+    return render_template('search.html', file_id=file_id, filename=filename, pdf_path=pdf_path, adobe_key=os.getenv('ADOBE_KEY', '02fc6f86eea34c389266060a4b48d938'))
 
 @app.route('/query')
 def query():

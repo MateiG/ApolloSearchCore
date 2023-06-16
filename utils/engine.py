@@ -4,6 +4,7 @@ import uuid
 from tqdm import tqdm, trange
 from datetime import datetime
 
+from pypdf import PdfReader
 import openai
 
 from utils.pdf_handler import PDFHandler
@@ -11,7 +12,8 @@ from utils.model_handler import ModelHandler
 
 
 class Engine():
-    INDEX_PATH='index/'
+    INDEX_PATH = 'index/'
+    UPLOAD_PATH = 'static/uploads/'
 
     def __init__(self):
         openai.api_key = os.getenv('OPENAI_API_KEY', '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')
@@ -46,7 +48,20 @@ class Engine():
         corpus = self.read(file_id)['documents']
         top_k = min(len(corpus), top_k)
 
-        results = self.model_handler.retrieve(corpus, query, top_k)
+        result_indices = self.model_handler.retrieve(corpus, query, top_k)
+        results = []
+        for i in result_indices:
+            corpus_doc = corpus[i]
+            h_start, h_end = self.model_handler.highlight(query, corpus_doc['text'])
+
+            result = {
+                'id': corpus_doc['id'],
+                'page': corpus_doc['page'],
+                'text': corpus_doc['text'],
+                'h_start': h_start,
+                'h_end': h_end
+            }
+            results.append(result)
         return results
     
     def insight(self, file_id, query, retrieved_ids, context_window=3):
@@ -80,3 +95,7 @@ class Engine():
         with open(os.path.join('index/', file_id + '.json'), 'r') as f:
             data = json.load(f)
         return data
+    
+    def get_num_pages(self, file_id):
+        reader = PdfReader(os.path.join(Engine.UPLOAD_PATH, file_id + '.pdf'))
+        return len(reader.pages)

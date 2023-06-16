@@ -69,19 +69,7 @@ class ModelHandler():
         values, indices = torch.topk(similarities, k=top_k)
         reranked_indices = self.rerank(query, texts, indices.tolist())
         
-        results = []
-        for i in reranked_indices:
-            corpus_doc = corpus[i]
-            h_start, h_end = self.highlight(query, corpus_doc['text'])
-
-            result = {
-                'id': corpus_doc['id'],
-                'text': corpus_doc['text'],
-                'h_start': h_start,
-                'h_end': h_end
-            }
-            results.append(result)
-        return results
+        return reranked_indices
     
     def rerank(self, query, texts, retrieved_indices):
         num_indices = len(retrieved_indices)
