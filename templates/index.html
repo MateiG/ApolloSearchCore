@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PDF Upload</title>
+</head>
+
+<body>
+    <h1>Upload a PDF file</h1>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".pdf">
+        <input type="submit" value="Upload">
+    </form>
+
+    <h1>Uploaded files (refresh to get the latest list)</h1>
+    <ul id="uploaded-files"></ul>
+
+    <script>
+        const uploadedFilesList = document.getElementById("uploaded-files");
+
+        const sessionUploads = JSON.parse('{{ uploads | tojson }}');
+        if (sessionUploads.length === 0) {
+            const messageItem = document.createElement("li");
+            messageItem.textContent = 'No uploaded files.';
+            uploadedFilesList.appendChild(messageItem);
+        } else {
+            sessionUploads.forEach(element => {
+                const listItem = document.createElement('li');
+
+                if (element.status === 'Ready') {
+                    const link = document.createElement('a');
+
+                    const params = new URLSearchParams({
+                        file_id: element.id,
+                    });
+                    link.href = `/search?${params.toString()}`;
+                    link.target = '_blank';
+                    link.textContent = '(' + element.status + ') ' + element.name;
+                    listItem.appendChild(link);
+                } else {
+                    listItem.textContent = '(' + element.status + ') ' + element.name;
+                }
+                uploadedFilesList.appendChild(listItem);
+            });
+        }
+    </script>
+</body>
+
+</html>

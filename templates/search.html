@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PDF Viewer with Search</title>
+    <style>
+        body {
+            height: 100vh;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        #pdf-container {
+            flex: 1;
+            overflow-y: hidden;
+        }
+
+        #search-container {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            padding: 20px;
+            background-color: #f1f1f1;
+        }
+
+        #search-input {
+            padding: 10px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        #insight-box {
+            flex: none;
+            height: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            overflow: auto;
+            font-family: sans-serif;
+            font-size: 16px;
+        }
+
+        #insight-box p {
+            padding: 0;
+            margin: 0;
+            font-family: sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #5e5e5e;
+        }
+
+        #results-list {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #ddd;
+            overflow: auto;
+            list-style: none;
+            box-sizing: border-box;
+        }
+
+        #results-list li {
+            padding: 10px;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            font-family: sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #5e5e5e;
+        }
+    </style>
+    <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
+</head>
+
+<body>
+    <div id="pdf-container">
+        <div id="adobe-dc-view"></div>
+    </div>
+
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="Search" />
+        <div id="insight-box">
+            <p>Insights are generated after searching</p>
+        </div>
+        <ol id="results-list">
+            <li>Results will appear here</li>
+        </ol>
+    </div>
+
+    <script>
+        document.addEventListener("adobe_dc_view_sdk.ready", function () {
+            var adobeDCView = new AdobeDC.View({ clientId: "{{ adobe_key }}", divId: "adobe-dc-view" });
+            adobeDCView.previewFile({
+                content: { location: { url: "{{ pdf_path }}" } },
+                metaData: { fileName: "{{ filename }}" }
+            }, { embedMode: "FULL_WINDOW", defaultViewMode: "FIT_WIDTH", showAnnotationTools: false, showDownloadPDF: true });
+        });
+    </script>
+
+    <script>
+        const insightBox = document.getElementById('insight-box');
+        const resultList = document.getElementById('results-list');
+        const searchInput = document.getElementById('search-input');
+
+        searchInput.addEventListener('keyup', function (event) {
+            if (event.keyCode === 13) {
+                const searchTerm = searchInput.value.trim();
+                if (searchTerm !== '') {
+                    reset();
+                    search(searchTerm);
+                }
+            }
+        });
+
+        function reset() {
+            insightBox.innerHTML = '';
+            resultList.innerHTML = '';
+
+            const paragraph = document.createElement('p');
+            paragraph.textContent = 'Generating...';
+            insightBox.appendChild(paragraph);
+
+            const listItem = document.createElement('li');
+            listItem.textContent = 'Searching...';
+            resultList.appendChild(listItem);
+        }
+
+        function search(query) {
+            const params = new URLSearchParams({
+                file_id: "{{ file_id }}",
+                query: query
+            });
+
+            fetch(`/query?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    resultList.innerHTML = '';
+
+                    data['results'].forEach(doc => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = boldSubstring(doc['text'], doc['h_start'], doc['h_end']);
+                        resultList.appendChild(listItem);
+                    });
+
+                    const docIDs = data['results'].map(result => result.id);
+                    get_insight(query, docIDs)
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        }
+
+        function get_insight(query, docIDs) {
+            const payload = {
+                file_id: "{{ file_id }}",
+                query: query,
+                documents: docIDs
+            };
+
+            fetch('/insight', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            }).then(response => response.json())
+                .then(data => {
+                    insightBox.innerHTML = '';
+
+                    const paragraph = document.createElement('p');
+                    paragraph.textContent = data['prediction'];
+                    insightBox.appendChild(paragraph);
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+
+        function boldSubstring(str, startIndex, endIndex) {
+            if (startIndex < 0 || endIndex > str.length || startIndex >= endIndex) {
+                return str;
+            }
+
+            return `${str.substring(0, startIndex)}<b>${str.substring(startIndex, endIndex)}</b>${str.substring(endIndex)}`;
+        }
+    </script>
+</body>
+
+</html>
