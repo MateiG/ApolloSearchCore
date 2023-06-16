@@ -60,7 +60,7 @@ class Engine():
 
         return start, end # res['answer']
 
-    def index(self, file_id, filename, is_short=True):
+    def index(self, file_id, filename, is_short=True, chunk_size=100):
         print('starting indexing')
         if (is_short):
             documents = self.pdf_handler.online_process(file_id)
@@ -69,7 +69,12 @@ class Engine():
         print('finished processing, generating embeddings')
         texts = [doc['text'] for doc in documents]
 
-        embeddings = self.encode(texts)
+        embeddings = []
+        for chunk_start in range(0, len(texts), chunk_size):
+            chunk = texts[chunk_start:chunk_start+chunk_size]
+            chunk_embeddings = self.encode(chunk)
+            embeddings.extend(chunk_embeddings)
+        
         for i in range(len(texts)):
             documents[i]['embedding'] = embeddings[i]
 
