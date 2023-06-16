@@ -1,15 +1,15 @@
+import os
+import re
+
 from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 from google.cloud import storage
 
-import os
-import re
-
 PROJECT_ID = 'apollosearch'
 LOCATION = 'us'
 PROCESSOR_ID = '11f4f90dcc5e62d1'
-GCS_OUTPUT_URI = 'gs://apollo-search-storage/output/'
 GCS_INPUT_URI = 'gs://apollo-search-storage/input/'
+GCS_OUTPUT_URI = 'gs://apollo-search-storage/output/'
 MIME_TYPE = 'application/pdf'
 
 
