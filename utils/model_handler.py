@@ -39,7 +39,7 @@ class ModelHandler():
     def encode(self, documents, chunk_size=100):
         embeddings = []
         with torch.no_grad():
-            for chunk_start in range(0, len(documents), chunk_size):
+            for chunk_start in trange(0, len(documents), chunk_size):
                 chunk = documents[chunk_start:chunk_start+chunk_size]
                 encoded_input = self.encoder_tokenizer(chunk, padding=True, truncation=True, return_tensors='pt')
                 model_output = self.encoder_model(**encoded_input)

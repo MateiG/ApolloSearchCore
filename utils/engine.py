@@ -20,13 +20,17 @@ class Engine():
         self.model_handler = ModelHandler()
 
     def index(self, file_id, filename, is_short=True):
+        print('parsing pdf')
         if (is_short):
             documents = self.pdf_handler.online_process(file_id)
         else:
             documents = self.pdf_handler.offline_process(file_id)
         
+        print('finished parsing pdf, generating embeddings')
         texts = [doc['text'] for doc in documents]
         embeddings = self.model_handler.encode(texts)
+        print('finished generating embeddings, writing to index')
+
         
         for i in range(len(texts)):
             documents[i]['embedding'] = embeddings[i]
@@ -35,13 +39,14 @@ class Engine():
         index = {'name': filename, 'text': text, 'documents': documents}
 
         self.write(dir=Engine.INDEX_PATH, name=file_id, object=index)
+        print('finished writing to index')
         return index
     
     def retrieve(self, file_id, query, top_k=15):
         corpus = self.read(file_id)['documents']
         top_k = min(len(corpus), top_k)
 
-        results = self.model_handler.retrieve(corpus, query)
+        results = self.model_handler.retrieve(corpus, query, top_k)
         return results
     
     def insight(self, file_id, query, retrieved_ids, context_window=3):
