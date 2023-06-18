@@ -1,9 +1,13 @@
 import os
 import re
 
+from nltk.tokenize import sent_tokenize, word_tokenize
+
 from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 from google.cloud import storage
+from google.cloud import documentai_toolbox
+
 
 PROJECT_ID = 'apollosearch'
 LOCATION = 'us'
@@ -14,7 +18,7 @@ MIME_TYPE = 'application/pdf'
 
 
 class PDFHandler():
-    UPLOAD_DIR='static/uploads/'
+    UPLOAD_DIR = 'static/uploads/'
 
     def __init__(self):
         self.storage_client = storage.Client()
@@ -25,22 +29,31 @@ class PDFHandler():
 
         self.RESOURCE_NAME = self.docai_client.processor_path(PROJECT_ID, LOCATION, PROCESSOR_ID)
 
-    def parse_document(self, document, existing_documents=[]):
-        paragraph_id = 0
-        documents = existing_documents
+    def split_block(self, text, chunk_size=3, min_words=5):
+        text = re.sub(r'\s+', ' ', text).strip()
 
-        text = document.text
+        sentences = sent_tokenize(text)
+        num_sentences = len(sentences)
+        chunked_sentences = []
+        for i in range(0, num_sentences, chunk_size):
+            chunk = sentences[i:i+chunk_size]
+            chunk = ' '.join(chunk)
+            word_count = len(word_tokenize(chunk))
+            if (word_count >= min_words):
+                chunked_sentences.append(chunk)
+        return chunked_sentences
+
+    def parse_docai_document(self, document):
+        paragraph_id = 0
+        documents = []
+
         for page in document.pages:
-            for paragraph in page.paragraphs:
-                paragraph_text = ''
-                for segment in paragraph.layout.text_anchor.text_segments:
-                    start_index = int(segment.start_index)
-                    end_index = int(segment.end_index)
-                    paragraph_text += text[start_index:end_index]
-                
-                paragraph_text = re.sub(r'\s+', ' ', paragraph_text)
-                if (len(paragraph_text) > 50):
-                    parsed_doc = {'id': paragraph_id, 'page': page.page_number, 'text': paragraph_text}
+            for block in page.blocks:
+                block_chunks = self.split_block(block.text)
+                for chunk in block_chunks:
+                    y_scroll = int(block.documentai_block.layout.bounding_poly.normalized_vertices[0].y
+                                   * page.documentai_page.dimension.height)
+                    parsed_doc = {'id': paragraph_id, 'page': page.documentai_page.page_number, 'y_scroll': y_scroll, 'text': chunk}
                     documents.append(parsed_doc)
                     paragraph_id += 1
         return documents
@@ -51,9 +64,10 @@ class PDFHandler():
         raw_document = documentai.RawDocument(content=image_content, mime_type=MIME_TYPE)
         request = documentai.ProcessRequest(name=self.RESOURCE_NAME, raw_document=raw_document)
         result = self.docai_client.process_document(request=request)
-        documents = self.parse_document(result.document)
+        wrapped_document = documentai_toolbox.document.Document.from_documentai_document(result.document)
+        documents = self.parse_docai_document(wrapped_document)
         return documents
-    
+
     def offline_process(self, file_id):
         blob = self.bucket.blob('input/' + file_id + '.pdf')
         blob.upload_from_filename(os.path.join(self.UPLOAD_DIR, file_id + '.pdf'))
@@ -77,18 +91,8 @@ class PDFHandler():
         operation = self.docai_client.batch_process_documents(request)
         operation.result()
 
-        metadata = documentai.BatchProcessMetadata(operation.metadata)
-        process = metadata.individual_process_statuses[0]
-        matches = re.match(r"gs://(.*?)/(.*)", process.output_gcs_destination)
-        output_bucket, output_prefix = matches.groups()
-        output_blobs = self.storage_client.list_blobs(output_bucket, prefix=output_prefix)
-
-        documents = []
-        for blob in output_blobs:
-            document = documentai.Document.from_json(blob.download_as_bytes(), ignore_unknown_fields=True)
-            documents = self.parse_document(document, documents)
-        return documents
-
-
-# handler = PDFHandler()
-# output = handler.offline_process('1de4d540-737d-4aa1-9c57-862510ec5141')
+        docai_document = documentai_toolbox.document.Document.from_batch_process_operation(
+            location=LOCATION, operation_name=operation.operation.name
+        )[0]
+        parsed_documents = self.parse_docai_document(docai_document)
+        return parsed_documents
