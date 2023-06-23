@@ -1,4 +1,6 @@
 models/
+index/
+static/uploads/
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
