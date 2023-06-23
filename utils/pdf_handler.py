@@ -1,6 +1,8 @@
 import os
 import re
 
+from pypdf import PdfReader
+
 from nltk.tokenize import sent_tokenize, word_tokenize
 
 from google.api_core.client_options import ClientOptions
@@ -29,46 +31,73 @@ class PDFHandler():
 
         self.RESOURCE_NAME = self.docai_client.processor_path(PROJECT_ID, LOCATION, PROCESSOR_ID)
 
-    def split_block(self, text, chunk_size=3, min_words=5):
+    def clean_string(self, text):
+        pattern = r'[^a-zA-Z0-9!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~\s]'
+
         text = re.sub(r'\s+', ' ', text).strip()
+        text = re.sub(pattern, '', text)
+        return text
+        
+    def split_text(self, text, chunk_size=3, min_words=3):
+        text = self.clean_string(text)
 
-        sentences = sent_tokenize(text)
-        num_sentences = len(sentences)
-        chunked_sentences = []
-        for i in range(0, num_sentences, chunk_size):
-            chunk = sentences[i:i+chunk_size]
-            chunk = ' '.join(chunk)
-            word_count = len(word_tokenize(chunk))
-            if (word_count >= min_words):
-                chunked_sentences.append(chunk)
-        return chunked_sentences
+        if (len(word_tokenize(text)) < min_words):
+            return []
 
-    def parse_docai_document(self, document):
+        # sentences = sent_tokenize(text)
+        # long_sentences = []
+        # for sent in sentences:
+        #     if (len(word_tokenize(sent)) > min_words):
+        #         long_sentences.append(sent)
+
+        # num_sentences = len(sentences)
+        # chunked_sentences = []
+        # for i in range(0, num_sentences, chunk_size):
+        #     chunk = sentences[i:i+chunk_size]
+        #     chunk = ' '.join(chunk)
+        #     word_count = len(word_tokenize(chunk))
+        #     if (word_count >= min_words):
+        #         chunked_sentences.append(chunk)
+        return [text]
+
+    def get_vertices(self, norm_verts, metadata):
+        vertices = []
+        for vert in norm_verts:
+            vertices.append([int(vert.x * metadata[0]), int(vert.y * metadata[1])])
+        return vertices
+
+    def parse_docai_document(self, document, metadata):
         paragraph_id = 0
         documents = []
 
         for page in document.pages:
-            for block in page.blocks:
-                block_chunks = self.split_block(block.text)
-                for chunk in block_chunks:
-                    y_scroll = int(block.documentai_block.layout.bounding_poly.normalized_vertices[0].y
-                                   * page.documentai_page.dimension.height)
-                    parsed_doc = {'id': paragraph_id, 'page': page.documentai_page.page_number, 'y_scroll': y_scroll, 'text': chunk}
+            for paragraph in page.paragraphs:
+                chunks = self.split_text(paragraph.text)
+                # block_chunks = self.split_block(block.text)
+                for chunk in chunks:
+                    vertices = self.get_vertices(paragraph.documentai_paragraph.layout.bounding_poly.normalized_vertices, metadata)
+                    parsed_doc = {'id': paragraph_id, 'page': page.documentai_page.page_number,
+                                  'text': chunk, 'vertices': vertices}
                     documents.append(parsed_doc)
                     paragraph_id += 1
         return documents
 
     def online_process(self, file_id):
+        meta_reader = PdfReader(os.path.join(self.UPLOAD_DIR, file_id + '.pdf'))
+
         with open(os.path.join(PDFHandler.UPLOAD_DIR, file_id + '.pdf'), 'rb') as image:
             image_content = image.read()
         raw_document = documentai.RawDocument(content=image_content, mime_type=MIME_TYPE)
         request = documentai.ProcessRequest(name=self.RESOURCE_NAME, raw_document=raw_document)
         result = self.docai_client.process_document(request=request)
         wrapped_document = documentai_toolbox.document.Document.from_documentai_document(result.document)
-        documents = self.parse_docai_document(wrapped_document)
+        documents = self.parse_docai_document(wrapped_document, metadata=(
+            meta_reader.pages[0].mediabox.width, meta_reader.pages[0].mediabox.height))
         return documents
 
     def offline_process(self, file_id):
+        meta_reader = PdfReader(os.path.join(self.UPLOAD_DIR, file_id + '.pdf'))
+
         blob = self.bucket.blob('input/' + file_id + '.pdf')
         blob.upload_from_filename(os.path.join(self.UPLOAD_DIR, file_id + '.pdf'))
 
@@ -94,5 +123,6 @@ class PDFHandler():
         docai_document = documentai_toolbox.document.Document.from_batch_process_operation(
             location=LOCATION, operation_name=operation.operation.name
         )[0]
-        parsed_documents = self.parse_docai_document(docai_document)
+        parsed_documents = self.parse_docai_document(docai_document, metadata=(
+            meta_reader.pages[0].mediabox.width, meta_reader.pages[0].mediabox.height))
         return parsed_documents

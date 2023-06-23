@@ -10,9 +10,9 @@ from torch.nn import CosineSimilarity
 from transformers import pipeline, AutoTokenizer, AutoModel, AutoModelForSequenceClassification, AutoModelForQuestionAnswering
 
 class ModelHandler():
-    encoder_save_path='models/all-MiniLM-L6-v2'
-    cross_save_path='models/ms-marco-MiniLM-L-2-v2'
-    qa_save_path='models/tinyroberta-squad2'
+    encoder_save_path = 'models/all-mpnet-base-v2' # 'models/all-MiniLM-L6-v2'
+    cross_save_path = 'models/ms-marco-MiniLM-L-12-v2' # 'models/ms-marco-MiniLM-L-2-v2'
+    qa_save_path = 'models/tinyroberta-squad2'
 
     INDEX_PATH='index/'
 
@@ -59,7 +59,7 @@ class ModelHandler():
 
         return start, end # res['answer']
     
-    def retrieve(self, corpus, query, top_k=15):
+    def retrieve(self, corpus, query, top_k=50):
         texts = [doc['text'] for doc in corpus]
         
         corpus_emb = torch.tensor([doc['embedding'] for doc in corpus])
@@ -67,9 +67,10 @@ class ModelHandler():
 
         similarities = self.cos_sim(query_emb, corpus_emb)
         values, indices = torch.topk(similarities, k=top_k)
-        reranked_indices = self.rerank(query, texts, indices.tolist())
+        # reranked_indices = self.rerank(query, texts, indices.tolist())
         
-        return reranked_indices
+        # return reranked_indices
+        return indices.tolist()
     
     def rerank(self, query, texts, retrieved_indices):
         num_indices = len(retrieved_indices)

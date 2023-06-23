@@ -69,7 +69,14 @@
             font-size: 16px;
             line-height: 1.5;
             color: #5e5e5e;
+            cursor: pointer;
+            text-decoration: none;
         }
+
+        #results-list li:hover {
+            text-decoration: underline;
+        }
+
     </style>
     <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
 </head>
@@ -90,12 +97,22 @@
     </div>
 
     <script>
+        var adobeViewer;
+
         document.addEventListener("adobe_dc_view_sdk.ready", function () {
             var adobeDCView = new AdobeDC.View({ clientId: "{{ adobe_key }}", divId: "adobe-dc-view" });
-            adobeDCView.previewFile({
+            var previewFilePromise = adobeDCView.previewFile({
                 content: { location: { url: "{{ pdf_path }}" } },
                 metaData: { fileName: "{{ filename }}" }
-            }, { embedMode: "FULL_WINDOW", defaultViewMode: "FIT_WIDTH", showAnnotationTools: false, showDownloadPDF: true });
+            }, {
+                embedMode: "FULL_WINDOW", defaultViewMode: "FIT_WIDTH",
+                showAnnotationTools: false, showDownloadPDF: true, // enableSearchAPIs: true
+            });
+
+            previewFilePromise.then(viewer => {
+                adobeViewer = viewer;
+            });
+
         });
     </script>
 
@@ -136,11 +153,17 @@
             fetch(`/query?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log(data);
                     resultList.innerHTML = '';
 
                     data['results'].forEach(doc => {
                         const listItem = document.createElement('li');
                         listItem.innerHTML = boldSubstring(doc['text'], doc['h_start'], doc['h_end']);
+                        var searchTerm = doc['text'].substring(doc['h_start'], doc['h_start'] + 10);
+                        listItem.addEventListener("click", function () {
+                            // scrollToResult(doc['page'], doc['x_scroll'], doc['y_scroll'], searchTerm);
+                        });
+
                         resultList.appendChild(listItem);
                     });
 
@@ -176,6 +199,24 @@
                 .catch(error => {
                     console.log(error);
                 });
+        }
+
+        function scrollToResult(page, x_pixel, y_pixel, term) {
+            // if (adobeViewer) {
+            //     adobeViewer.getAPIs().then(apis => {
+            //         // console.log(term)
+            //         // apis.search(term)
+            //         //     .then(searchObject => console.log(searchObject))
+            //         //     .catch(error => console.log(error));
+            //         apis.gotoLocation(page, x_pixel, y_pixel)
+            //             .then(() => console.log("Success"))
+            //             .catch(error => console.log(error));
+            //     });
+            // } else {
+            //     console.log('adobeViewer not ready');
+            // }
+            // console.log('scroll to', page, x_pixel, y_pixel);
+
         }
 
         function boldSubstring(str, startIndex, endIndex) {

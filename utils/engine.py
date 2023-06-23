@@ -4,16 +4,20 @@ import uuid
 from tqdm import tqdm, trange
 from datetime import datetime
 
-from pypdf import PdfReader
 import openai
+from nltk.tokenize import word_tokenize
 
 from utils.pdf_handler import PDFHandler
 from utils.model_handler import ModelHandler
+
+from pypdf import PdfReader
 
 
 class Engine():
     INDEX_PATH = 'index/'
     UPLOAD_PATH = 'static/uploads/'
+
+    MAX_CHARS = 3800 * 4 # 3800 tokens * ~4 chars/token. Limit is 4097.
 
     def __init__(self):
         openai.api_key = os.getenv('OPENAI_API_KEY', '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')
@@ -33,18 +37,18 @@ class Engine():
         embeddings = self.model_handler.encode(texts)
         print('finished generating embeddings, writing to index')
 
-        
         for i in range(len(texts)):
             documents[i]['embedding'] = embeddings[i]
 
         text = ('\n').join(texts)
-        index = {'name': filename, 'text': text, 'documents': documents}
+        date = datetime.now()
+        index = {'name': filename, 'date': date.strftime("%Y-%m-%d %H:%M:%S"), 'text': text, 'documents': documents}
 
         self.write(dir=Engine.INDEX_PATH, name=file_id, object=index)
         print('finished writing to index')
         return index
     
-    def retrieve(self, file_id, query, top_k=15):
+    def retrieve(self, file_id, query, top_k=50):
         corpus = self.read(file_id)['documents']
         top_k = min(len(corpus), top_k)
 
@@ -57,6 +61,7 @@ class Engine():
             result = {
                 'id': corpus_doc['id'],
                 'page': corpus_doc['page'],
+                'vertices': corpus_doc['vertices'],
                 'text': corpus_doc['text'],
                 'h_start': h_start,
                 'h_end': h_end
@@ -76,7 +81,7 @@ class Engine():
         context = []
         for i in context_ids:
             context.append(corpus[i]['text'])
-        context = ('\n').join(context)
+        context = ('\n').join(context)[:Engine.MAX_CHARS]
 
         prompt = f'''Answer this prompt: {query}, with specific references to the following context:\n
             {context}\n
