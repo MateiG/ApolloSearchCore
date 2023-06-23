@@ -37,7 +37,7 @@ class PDFHandler():
         text = re.sub(r'\s+', ' ', text).strip()
         text = re.sub(pattern, '', text)
         return text
-        
+
     def split_text(self, text, chunk_size=3, min_words=3):
         text = self.clean_string(text)
 
@@ -60,11 +60,22 @@ class PDFHandler():
         #         chunked_sentences.append(chunk)
         return [text]
 
-    def get_vertices(self, norm_verts, metadata):
+    def get_bounding_box(self, norm_verts, metadata):
         vertices = []
         for vert in norm_verts:
             vertices.append([int(vert.x * metadata[0]), int(vert.y * metadata[1])])
-        return vertices
+
+        x_values = [v[0] for v in vertices]
+        y_values = [v[1] for v in vertices]
+        min_x = min(x_values)
+        max_x = max(x_values)
+        min_y = min(y_values)
+        max_y = max(y_values)
+
+        width = max_x - min_x
+        height = max_y - min_y
+
+        return [min_x, min_y, width, height]
 
     def parse_docai_document(self, document, metadata):
         paragraph_id = 0
@@ -75,9 +86,9 @@ class PDFHandler():
                 chunks = self.split_text(paragraph.text)
                 # block_chunks = self.split_block(block.text)
                 for chunk in chunks:
-                    vertices = self.get_vertices(paragraph.documentai_paragraph.layout.bounding_poly.normalized_vertices, metadata)
+                    box = self.get_bounding_box(paragraph.documentai_paragraph.layout.bounding_poly.normalized_vertices, metadata)
                     parsed_doc = {'id': paragraph_id, 'page': page.documentai_page.page_number,
-                                  'text': chunk, 'vertices': vertices}
+                                  'text': chunk, 'box': box}
                     documents.append(parsed_doc)
                     paragraph_id += 1
         return documents

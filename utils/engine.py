@@ -61,7 +61,7 @@ class Engine():
             result = {
                 'id': corpus_doc['id'],
                 'page': corpus_doc['page'],
-                'vertices': corpus_doc['vertices'],
+                'box': corpus_doc['box'],
                 'text': corpus_doc['text'],
                 'h_start': h_start,
                 'h_end': h_end

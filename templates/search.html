@@ -13,7 +13,15 @@
 
         #pdf-container {
             flex: 1;
-            overflow-y: hidden;
+            overflow-y: scroll;
+        }
+
+        canvas {
+            display: block;
+            margin: 10px auto;
+            border: 1px solid black;
+            height: 100%;
+            width: auto;
         }
 
         #search-container {
@@ -76,14 +84,15 @@
         #results-list li:hover {
             text-decoration: underline;
         }
-
     </style>
-    <script src="https://acrobatservices.adobe.com/view-sdk/viewer.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf.min.js"
+        integrity="sha512-FbzTWNUXsD1HkMnfODpqj77B8pWe5eG9MaVtaUyZQGe8FaeQg1sNKtwMWk9USkHFu3ub8dg5PSE24s4JJpJQcQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 </head>
 
 <body>
     <div id="pdf-container">
-        <div id="adobe-dc-view"></div>
     </div>
 
     <div id="search-container">
@@ -97,23 +106,60 @@
     </div>
 
     <script>
-        var adobeViewer;
+        // Load and render the PDF
+        const container = document.getElementById('pdf-container');
+        var pdfInstance;
 
-        document.addEventListener("adobe_dc_view_sdk.ready", function () {
-            var adobeDCView = new AdobeDC.View({ clientId: "{{ adobe_key }}", divId: "adobe-dc-view" });
-            var previewFilePromise = adobeDCView.previewFile({
-                content: { location: { url: "{{ pdf_path }}" } },
-                metaData: { fileName: "{{ filename }}" }
-            }, {
-                embedMode: "FULL_WINDOW", defaultViewMode: "FIT_WIDTH",
-                showAnnotationTools: false, showDownloadPDF: true, // enableSearchAPIs: true
-            });
+        var highlightedPage;
 
-            previewFilePromise.then(viewer => {
-                adobeViewer = viewer;
-            });
-
+        pdfjsLib.getDocument('{{ pdf_path }}').promise.then(pdf => {
+            pdfInstance = pdf;
+            for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+                const canvas = document.createElement('canvas');
+                container.appendChild(canvas);
+                renderPage(pageNumber, canvas);
+            }
         });
+
+        function renderPage(pageNumber, canvas) {
+            return new Promise((resolve, reject) => {
+                pdfInstance.getPage(pageNumber).then(page => {
+                    const context = canvas.getContext('2d');
+
+                    const viewport = page.getViewport({ scale: 1 });
+                    const scale = container.clientHeight / viewport.height;
+
+                    const scaledViewport = page.getViewport({ scale });
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+
+                    page.render({ canvasContext: context, viewport }).promise.then(function () {
+                        resolve();
+                    });
+                });
+            });
+        }
+
+        async function highlightRegion(pageNumber, x, y, width, height) {
+            await clearHighlight();
+
+            const canvas = container.querySelectorAll('canvas')[pageNumber - 1];
+            const context = canvas.getContext('2d');
+
+            context.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            context.fillRect(x, y, width, height);
+            canvas.scrollIntoView();
+
+            highlightedPage = pageNumber;
+        }
+
+        async function clearHighlight() {
+            if (highlightedPage) {
+                const canvas = container.querySelectorAll('canvas')[highlightedPage - 1];
+                await renderPage(highlightedPage, canvas);
+                highlightedPage = null;
+            }
+        }
     </script>
 
     <script>
@@ -161,7 +207,7 @@
                         listItem.innerHTML = boldSubstring(doc['text'], doc['h_start'], doc['h_end']);
                         var searchTerm = doc['text'].substring(doc['h_start'], doc['h_start'] + 10);
                         listItem.addEventListener("click", function () {
-                            // scrollToResult(doc['page'], doc['x_scroll'], doc['y_scroll'], searchTerm);
+                            highlightRegion(doc['page'], doc['box'][0], doc['box'][1], doc['box'][2], doc['box'][3])
                         });
 
                         resultList.appendChild(listItem);
@@ -223,7 +269,6 @@
             if (startIndex < 0 || endIndex > str.length || startIndex >= endIndex) {
                 return str;
             }
-
             return `${str.substring(0, startIndex)}<b>${str.substring(startIndex, endIndex)}</b>${str.substring(endIndex)}`;
         }
     </script>
