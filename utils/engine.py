@@ -17,7 +17,7 @@ class Engine():
     INDEX_PATH = 'index/'
     UPLOAD_PATH = 'static/uploads/'
 
-    MAX_CHARS = 3800 * 4 # 3800 tokens * ~4 chars/token. Limit is 4097.
+    MAX_CHARS = 3800 * 4  # 3800 tokens * ~4 chars/token + 200 for completion. Limit is 4097.
 
     def __init__(self):
         openai.api_key = os.getenv('OPENAI_API_KEY', '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')
@@ -31,7 +31,7 @@ class Engine():
             documents = self.pdf_handler.online_process(file_id)
         else:
             documents = self.pdf_handler.offline_process(file_id)
-        
+
         print('finished parsing pdf, generating embeddings')
         texts = [doc['text'] for doc in documents]
         embeddings = self.model_handler.encode(texts)
@@ -47,7 +47,7 @@ class Engine():
         self.write(dir=Engine.INDEX_PATH, name=file_id, object=index)
         print('finished writing to index')
         return index
-    
+
     def retrieve(self, file_id, query, top_k=50):
         corpus = self.read(file_id)['documents']
         top_k = min(len(corpus), top_k)
@@ -68,7 +68,7 @@ class Engine():
             }
             results.append(result)
         return results
-    
+
     def insight(self, file_id, query, retrieved_ids, context_window=3):
         corpus = self.read(file_id)['documents']
         max_index = len(corpus) - 1
@@ -83,10 +83,12 @@ class Engine():
             context.append(corpus[i]['text'])
         context = ('\n').join(context)[:Engine.MAX_CHARS]
 
-        prompt = f'''Answer this prompt: {query}, with specific references to the following context:\n
-            {context}\n
-            Limit to 5 short sentences that are easy to understand. 
-            Correct gramatical and punctuation errors where necessary.'''
+        prompt = f'''A document is being searched using this query: {query}.\n
+                    The following paragraphs from this document have been identified as containing relevant context: {context}.\n
+                    Return a response that provides insight to the user with specific references to the aforementioned context.
+                    Ensure the response accurately addresses the query - do not expand the scope of the response beyond the query.
+                    Limit the response to 5 sentences (shorter is better). Correct gramatical and punctuation errors where necessary.
+                    '''
         completion = openai.Completion.create(model='text-davinci-003', prompt=prompt, max_tokens=200, temperature=0.3)
 
         return completion.choices[0].text.strip()
@@ -100,7 +102,7 @@ class Engine():
         with open(os.path.join('index/', file_id + '.json'), 'r') as f:
             data = json.load(f)
         return data
-    
+
     def get_num_pages(self, file_id):
         reader = PdfReader(os.path.join(Engine.UPLOAD_PATH, file_id + '.pdf'))
         return len(reader.pages)

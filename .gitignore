@@ -1,7 +1,9 @@
 models/
 index/
 static/uploads/
-.DS_Store
+feedback.txt
+
+**/.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

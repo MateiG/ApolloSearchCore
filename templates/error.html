@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Apollo Search</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            font-size: 1.15rem;
+            line-height: 1.618;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            border-bottom: 1px solid black;
+        }
+
+        .header a {
+            padding: 10px 20px;
+            text-decoration: none;
+            color: black;
+        }
+
+        .header a:hover {
+            text-decoration: underline;
+        }
+
+        .body {
+            overflow: auto;
+            padding: 20px;
+        }
+
+        form #email {
+            width: 400px;
+        }
+
+        form textarea {
+            width: 500px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('feedback') }}">Feedback</a>
+        </div>
+
+        <div class="body">
+            <h1>There was an error resulting from what you tried to do.</h1>
+        </div>
+    </div>
+</body>
+
+</html>

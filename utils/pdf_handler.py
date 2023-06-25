@@ -63,7 +63,7 @@ class PDFHandler():
     def get_bounding_box(self, norm_verts, metadata):
         vertices = []
         for vert in norm_verts:
-            vertices.append([int(vert.x * metadata[0]), int(vert.y * metadata[1])])
+            vertices.append([vert.x, vert.y])
 
         x_values = [v[0] for v in vertices]
         y_values = [v[1] for v in vertices]

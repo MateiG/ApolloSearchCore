@@ -2,18 +2,78 @@
 <html>
 
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>Apollo Search</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            font-size: 1.15rem;
+            line-height: 1.618;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            border-bottom: 1px solid black;
+        }
+
+        .header a {
+            padding: 10px 20px;
+            text-decoration: none;
+            color: black;
+        }
+
+        .header a:hover {
+            text-decoration: underline;
+        }
+
+        .body {
+            overflow: auto;
+            padding: 20px;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Upload a PDF file</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".pdf">
-        <input type="submit" value="Upload">
-    </form>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}" style="text-decoration: underline;">Home</a>
+            <a href="/feedback">Feedback</a>
+        </div>
 
-    <h1>Uploaded files (refresh to get the latest list)</h1>
-    <ul id="uploaded-files"></ul>
+        <div class="body">
+            <h1>What is ApolloSearch?</h1>
+            <p>ApolloSearch is a tool that lets you search any PDF using natural language (like Googling it).</p>
+            <p>Short files (under 15 pages), are indexed in under 10 seconds. Longer files take around 30-60 seconds.</p>
+            <p>The upload limit is 100 MB, with no limit on number of pages. To delete everything you've uploaded, click
+                <a href="{{ url_for('clear') }}">here.</a></p>
+            
+                <h1>Upload a PDF file (please wait for the page to load completely once you've uploaded a file)</h1>
+            <form action="/upload" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".pdf">
+                <input type="submit" value="Upload">
+            </form>
+
+            <h1>Uploaded files (refresh to get the latest list)</h1>
+            <ul id="uploaded-files"></ul>
+        </div>
+    </div>
 
     <script>
         const uploadedFilesList = document.getElementById("uploaded-files");

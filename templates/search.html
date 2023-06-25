@@ -2,81 +2,103 @@
 <html>
 
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>Apollo Search</title>
+
     <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            font-size: 1.15rem;
+            line-height: 1.618;
+        }
+
+        html,
         body {
-            height: 100vh;
-            display: flex;
             margin: 0;
             padding: 0;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            border-bottom: 1px solid black;
+        }
+
+        .header a {
+            padding: 10px 20px;
+            text-decoration: none;
+            color: black;
+        }
+
+        .header a:hover {
+            text-decoration: underline;
+        }
+
+        .body {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            overflow: auto;
         }
 
         #pdf-container {
-            flex: 1;
-            overflow-y: scroll;
+            width: 50%;
+            border-right: 1px solid black;
+            overflow: scroll;
+            text-align: center;
         }
 
-        canvas {
-            display: block;
+        #pdf-container canvas {
+            border: 1px solid #000;
             margin: 10px auto;
-            border: 1px solid black;
-            height: 100%;
-            width: auto;
         }
 
-        #search-container {
+        .search-container {
+            width: 50%;
+            padding: 10px;
             display: flex;
-            flex: 1;
             flex-direction: column;
-            padding: 20px;
-            background-color: #f1f1f1;
+            height: 100%;
         }
 
         #search-input {
             padding: 10px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-            font-size: 16px;
+            margin: 10px;
+            border: 1px solid #d8dae1;
         }
 
         #insight-box {
-            flex: none;
-            height: auto;
-            margin-bottom: 20px;
+            border: 1px solid #d8dae1;
             padding: 10px;
-            border: 1px solid #ddd;
-            overflow: auto;
-            font-family: sans-serif;
-            font-size: 16px;
+            margin: 10px;
         }
 
         #insight-box p {
-            padding: 0;
             margin: 0;
-            font-family: sans-serif;
-            font-size: 16px;
-            line-height: 1.5;
-            color: #5e5e5e;
+        }
+
+        #results-box {
+            flex-grow: 1;
+            overflow: scroll;
+            border: 1px solid #d8dae1;
+            margin: 10px;
+            padding: 10px;
         }
 
         #results-list {
-            height: 100%;
-            padding: 0;
             margin: 0;
-            border: 1px solid #ddd;
-            overflow: auto;
-            list-style: none;
-            box-sizing: border-box;
         }
 
         #results-list li {
-            padding: 10px;
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
-            font-family: sans-serif;
-            font-size: 16px;
-            line-height: 1.5;
-            color: #5e5e5e;
             cursor: pointer;
             text-decoration: none;
         }
@@ -85,29 +107,40 @@
             text-decoration: underline;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf.min.js"
-        integrity="sha512-FbzTWNUXsD1HkMnfODpqj77B8pWe5eG9MaVtaUyZQGe8FaeQg1sNKtwMWk9USkHFu3ub8dg5PSE24s4JJpJQcQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
+    <script src="{{ url_for('static', filename='pdfjs-3.7.107-dist/build/pdf.js') }}"></script>
 </head>
 
 <body>
-    <div id="pdf-container">
-    </div>
-
-    <div id="search-container">
-        <input type="text" id="search-input" placeholder="Search" />
-        <div id="insight-box">
-            <p>Insights are generated after searching</p>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="/feedback">Feedback</a>
         </div>
-        <ol id="results-list">
-            <li>Results will appear here</li>
-        </ol>
+
+        <div class="body">
+            <div id="pdf-container"></div>
+
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search" />
+                <div id="insight-box">
+                    <details>
+                        <summary>Insights are generated after searching</summary>
+                        <p id="insight-text"></p>
+                    </details>
+                </div>
+                <div id="results-box">
+                    <ol id="results-list">
+                        <li>Results will appear here</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         // Load and render the PDF
-        const container = document.getElementById('pdf-container');
+        const pdfContainer = document.getElementById('pdf-container');
         var pdfInstance;
 
         var highlightedPage;
@@ -116,24 +149,26 @@
             pdfInstance = pdf;
             for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
                 const canvas = document.createElement('canvas');
-                container.appendChild(canvas);
+                pdfContainer.appendChild(canvas);
                 renderPage(pageNumber, canvas);
+                // window.addEventListener('resize', function(event) {
+                //     renderPage(pageNumber, canvas);
+                // });
             }
         });
 
         function renderPage(pageNumber, canvas) {
             return new Promise((resolve, reject) => {
                 pdfInstance.getPage(pageNumber).then(page => {
-                    const context = canvas.getContext('2d');
+                    var viewport = page.getViewport({ scale: 1 });
+                    var scale = (pdfContainer.clientWidth - 40) / viewport.width;
+                    var scaledViewport = page.getViewport({ scale: scale });
 
-                    const viewport = page.getViewport({ scale: 1 });
-                    const scale = container.clientHeight / viewport.height;
-
-                    const scaledViewport = page.getViewport({ scale });
+                    var context = canvas.getContext('2d');
                     canvas.width = scaledViewport.width;
                     canvas.height = scaledViewport.height;
 
-                    page.render({ canvasContext: context, viewport }).promise.then(function () {
+                    page.render({ canvasContext: context, viewport: scaledViewport }).promise.then(function () {
                         resolve();
                     });
                 });
@@ -143,11 +178,11 @@
         async function highlightRegion(pageNumber, x, y, width, height) {
             await clearHighlight();
 
-            const canvas = container.querySelectorAll('canvas')[pageNumber - 1];
+            const canvas = pdfContainer.querySelectorAll('canvas')[pageNumber - 1];
             const context = canvas.getContext('2d');
 
-            context.fillStyle = 'rgba(255, 255, 0, 0.3)';
-            context.fillRect(x, y, width, height);
+            context.fillStyle = 'rgba(255, 255, 0, 0.4)';
+            context.fillRect(x * canvas.width, y * canvas.height, width * canvas.width, height * canvas.height);
             canvas.scrollIntoView();
 
             highlightedPage = pageNumber;
@@ -155,7 +190,7 @@
 
         async function clearHighlight() {
             if (highlightedPage) {
-                const canvas = container.querySelectorAll('canvas')[highlightedPage - 1];
+                const canvas = pdfContainer.querySelectorAll('canvas')[highlightedPage - 1];
                 await renderPage(highlightedPage, canvas);
                 highlightedPage = null;
             }
@@ -163,7 +198,7 @@
     </script>
 
     <script>
-        const insightBox = document.getElementById('insight-box');
+        const insightText = document.getElementById('insight-text');
         const resultList = document.getElementById('results-list');
         const searchInput = document.getElementById('search-input');
 
@@ -178,12 +213,12 @@
         });
 
         function reset() {
-            insightBox.innerHTML = '';
+            insightText.innerHTML = '';
             resultList.innerHTML = '';
 
             const paragraph = document.createElement('p');
             paragraph.textContent = 'Generating...';
-            insightBox.appendChild(paragraph);
+            insightText.appendChild(paragraph);
 
             const listItem = document.createElement('li');
             listItem.textContent = 'Searching...';
@@ -218,6 +253,7 @@
                 })
                 .catch(error => {
                     console.error(error);
+                    alert("Couldn't complete your search. Try a different query or document.");
                 });
         }
 
@@ -236,33 +272,16 @@
                 body: JSON.stringify(payload)
             }).then(response => response.json())
                 .then(data => {
-                    insightBox.innerHTML = '';
+                    insightText.innerHTML = '';
 
                     const paragraph = document.createElement('p');
                     paragraph.textContent = data['prediction'];
-                    insightBox.appendChild(paragraph);
+                    insightText.appendChild(paragraph);
                 })
                 .catch(error => {
                     console.log(error);
+                    alert("Couldn't generate insight. Try a different query or document.");
                 });
-        }
-
-        function scrollToResult(page, x_pixel, y_pixel, term) {
-            // if (adobeViewer) {
-            //     adobeViewer.getAPIs().then(apis => {
-            //         // console.log(term)
-            //         // apis.search(term)
-            //         //     .then(searchObject => console.log(searchObject))
-            //         //     .catch(error => console.log(error));
-            //         apis.gotoLocation(page, x_pixel, y_pixel)
-            //             .then(() => console.log("Success"))
-            //             .catch(error => console.log(error));
-            //     });
-            // } else {
-            //     console.log('adobeViewer not ready');
-            // }
-            // console.log('scroll to', page, x_pixel, y_pixel);
-
         }
 
         function boldSubstring(str, startIndex, endIndex) {
