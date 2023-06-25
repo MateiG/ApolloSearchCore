@@ -94,6 +94,11 @@
             padding: 10px;
         }
 
+        #results-box p {
+            margin: 0;
+        }
+
+
         #results-list {
             margin: 0;
         }
@@ -130,8 +135,8 @@
                     </details>
                 </div>
                 <div id="results-box">
+                    <p id="results-status">Results will appear here</p>
                     <ol id="results-list">
-                        <li>Results will appear here</li>
                     </ol>
                 </div>
             </div>
@@ -199,31 +204,22 @@
 
     <script>
         const insightText = document.getElementById('insight-text');
-        const resultList = document.getElementById('results-list');
+        const resultStatus = document.getElementById('results-status');
+        const resultsList = document.getElementById('results-list');
         const searchInput = document.getElementById('search-input');
 
         searchInput.addEventListener('keyup', function (event) {
             if (event.keyCode === 13) {
                 const searchTerm = searchInput.value.trim();
                 if (searchTerm !== '') {
-                    reset();
+                    insightText.innerHTML = 'Generating...';
+                    resultStatus.innerHTML = 'Searching...';
+                    resultsList.innerHTML = '';
+
                     search(searchTerm);
                 }
             }
         });
-
-        function reset() {
-            insightText.innerHTML = '';
-            resultList.innerHTML = '';
-
-            const paragraph = document.createElement('p');
-            paragraph.textContent = 'Generating...';
-            insightText.appendChild(paragraph);
-
-            const listItem = document.createElement('li');
-            listItem.textContent = 'Searching...';
-            resultList.appendChild(listItem);
-        }
 
         function search(query) {
             const params = new URLSearchParams({
@@ -234,8 +230,8 @@
             fetch(`/query?${params.toString()}`)
                 .then(response => response.json())
                 .then(data => {
-                    console.log(data);
-                    resultList.innerHTML = '';
+                    resultStatus.innerHTML = '';
+                    resultsList.innerHTML = '';
 
                     data['results'].forEach(doc => {
                         const listItem = document.createElement('li');
@@ -245,7 +241,7 @@
                             highlightRegion(doc['page'], doc['box'][0], doc['box'][1], doc['box'][2], doc['box'][3])
                         });
 
-                        resultList.appendChild(listItem);
+                        resultsList.appendChild(listItem);
                     });
 
                     const docIDs = data['results'].map(result => result.id);
@@ -253,6 +249,8 @@
                 })
                 .catch(error => {
                     console.error(error);
+                    resultStatus.innerHTML = "Couldn't complete your search. Try a different query or document.";
+                    resultsList.innerHTML = '';
                     alert("Couldn't complete your search. Try a different query or document.");
                 });
         }
@@ -272,14 +270,11 @@
                 body: JSON.stringify(payload)
             }).then(response => response.json())
                 .then(data => {
-                    insightText.innerHTML = '';
-
-                    const paragraph = document.createElement('p');
-                    paragraph.textContent = data['prediction'];
-                    insightText.appendChild(paragraph);
+                    insightText.innerHTML = data['prediction'];
                 })
                 .catch(error => {
                     console.log(error);
+                    insightText.innerHTML = "Couldn't generate insight. Try a different query or document.";
                     alert("Couldn't generate insight. Try a different query or document.");
                 });
         }
