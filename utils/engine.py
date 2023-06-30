@@ -26,16 +26,13 @@ class Engine():
         self.model_handler = ModelHandler()
 
     def index(self, file_id, filename, is_short=True):
-        print('parsing pdf')
         if (is_short):
             documents = self.pdf_handler.online_process(file_id)
         else:
             documents = self.pdf_handler.offline_process(file_id)
 
-        print('finished parsing pdf, generating embeddings')
         texts = [doc['text'] for doc in documents]
         embeddings = self.model_handler.encode(texts)
-        print('finished generating embeddings, writing to index')
 
         for i in range(len(texts)):
             documents[i]['embedding'] = embeddings[i]
@@ -45,7 +42,6 @@ class Engine():
         index = {'name': filename, 'date': date.strftime("%Y-%m-%d %H:%M:%S"), 'text': text, 'documents': documents}
 
         self.write(dir=Engine.INDEX_PATH, name=file_id, object=index)
-        print('finished writing to index')
         return index
 
     def retrieve(self, file_id, query, top_k=50):
@@ -56,7 +52,8 @@ class Engine():
         results = []
         for i in result_indices:
             corpus_doc = corpus[i]
-            h_start, h_end = self.model_handler.highlight(query, corpus_doc['text'])
+            # h_start, h_end = self.model_handler.highlight(query, corpus_doc['text'])
+            h_start, h_end = 0, 0
 
             result = {
                 'id': corpus_doc['id'],

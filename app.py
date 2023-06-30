@@ -48,7 +48,8 @@ def index():
                 upload['status'] = 'Processing'
 
         return render_template('index.html', uploads=session['uploads'])
-    except:
+    except Exception as e:
+        print(e)
         return redirect(url_for('error'))
 
 
@@ -78,7 +79,8 @@ def upload():
             thread.start()
             return redirect(url_for('index'))
         return redirect(url_for('search', file_id=file_id))
-    except:
+    except Exception as e:
+        print(e)
         return redirect(url_for('error'))
 
 
@@ -91,7 +93,8 @@ def search():
         pdf_path = os.path.join('static/uploads/', file_id + '.pdf')
         filename = index['name']
         return render_template('search.html', file_id=file_id, filename=filename, pdf_path=pdf_path, adobe_key=os.getenv('ADOBE_KEY', 'f19674f49c2b4844aa1255d5e06b7fc0'))
-    except:
+    except Exception as e:
+        print(e)
         return redirect(url_for('error'))
 
 
@@ -103,7 +106,8 @@ def query():
 
         results = engine.retrieve(file_id, query)
         return jsonify({'results': results})
-    except:
+    except Exception as e:
+        print(e)
         return 'Could not query', 400
 
 
@@ -118,7 +122,8 @@ def insight():
 
         prediction = engine.insight(file_id, query, doc_ids)
         return jsonify({'prediction': prediction})
-    except:
+    except Exception as e:
+        print(e)
         return 'Could not get insight', 400
 
 
