@@ -144,7 +144,6 @@
     </div>
 
     <script>
-        // Load and render the PDF
         const pdfContainer = document.getElementById('pdf-container');
         var pdfInstance;
 
@@ -188,7 +187,7 @@
 
             context.fillStyle = 'rgba(255, 255, 0, 0.4)';
             context.fillRect(x * canvas.width, y * canvas.height, width * canvas.width, height * canvas.height);
-            canvas.scrollIntoView();
+            canvas.scrollIntoView(); // scroll the rect into view
 
             highlightedPage = pageNumber;
         }

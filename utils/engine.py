@@ -8,6 +8,7 @@ import openai
 from nltk.tokenize import word_tokenize
 
 from utils.pdf_handler import PDFHandler
+from utils.ocr_handler import OCRHandler
 from utils.model_handler import ModelHandler
 
 from pypdf import PdfReader
@@ -22,14 +23,17 @@ class Engine():
     def __init__(self):
         openai.api_key = os.getenv('OPENAI_API_KEY', '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')
 
-        self.pdf_handler = PDFHandler()
+        # self.pdf_handler = PDFHandler()
+        self.ocr_handler = OCRHandler()
         self.model_handler = ModelHandler()
 
     def index(self, file_id, filename, is_short=True):
-        if (is_short):
-            documents = self.pdf_handler.online_process(file_id)
-        else:
-            documents = self.pdf_handler.offline_process(file_id)
+        # if (is_short):
+        #     documents = self.pdf_handler.online_process(file_id)
+        # else:
+        #     documents = self.pdf_handler.offline_process(file_id)
+
+        documents = self.ocr_handler.process_pdf(file_id)
 
         texts = [doc['text'] for doc in documents]
         embeddings = self.model_handler.encode(texts)
@@ -39,7 +43,13 @@ class Engine():
 
         text = ('\n').join(texts)
         date = datetime.now()
-        index = {'name': filename, 'date': date.strftime("%Y-%m-%d %H:%M:%S"), 'text': text, 'documents': documents}
+        index = {
+            'name': filename,
+            'size': os.path.getsize(os.path.join(Engine.UPLOAD_PATH, file_id + '.pdf')),
+            'created': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'text': text,
+            'documents': documents
+        }
 
         self.write(dir=Engine.INDEX_PATH, name=file_id, object=index)
         return index
@@ -86,9 +96,10 @@ class Engine():
                     Ensure the response accurately addresses the query - do not expand the scope of the response beyond the query.
                     Limit the response to 5 sentences (shorter is better). Correct gramatical and punctuation errors where necessary.
                     '''
-        completion = openai.Completion.create(model='text-davinci-003', prompt=prompt, max_tokens=200, temperature=0.3)
+        # completion = openai.Completion.create(model='text-davinci-003', prompt=prompt, max_tokens=200, temperature=0.3)
 
-        return completion.choices[0].text.strip()
+        # return completion.choices[0].text.strip()
+        return ''
 
     def write(self, dir: str, name: str, object: dict):
         save_path = os.path.join(dir, name + '.json')
