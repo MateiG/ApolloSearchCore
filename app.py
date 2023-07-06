@@ -5,7 +5,6 @@ import threading
 import traceback
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from werkzeug.utils import secure_filename
 
 from mixpanel import Mixpanel
 
@@ -24,9 +23,9 @@ def clear():
 
         if ('uploads' not in session):
             session['uploads'] = []
-        for upload in session['uploads']:            
-            upload_path = os.path.join('static/uploads/', upload['id'] + '.pdf')
-            index_path = os.path.join('index/', upload['id'] + '.json')
+        for file_id in session['uploads']:
+            upload_path = os.path.join('static/uploads/', file_id + '.pdf')
+            index_path = os.path.join('index/', file_id + '.json')
 
             if (os.path.isfile(upload_path)):
                 os.remove(upload_path)
@@ -48,14 +47,13 @@ def index():
         if ('uploads' not in session):
             session['uploads'] = []
 
+        states = []
         for i in range(len(session['uploads'])):
-            upload = session['uploads'][i]
-            if (os.path.exists('index/' + upload['id'] + '.json')):
-                upload['status'] = 'Ready'
-            else:
-                upload['status'] = 'Processing'
+            file_id = session['uploads'][i]
+            file_status = engine.get_status(file_id)
+            states.append(file_status)
 
-        return render_template('index.html', uploads=session['uploads'])
+        return render_template('index.html', uploads=states)
     except Exception as e:
         traceback.print_exc()
         return redirect(url_for('error'))
@@ -67,28 +65,16 @@ def upload():
         mp.track(request.remote_addr, 'upload')
 
         file = request.files['file']
-        filename = secure_filename(file.filename)
         file_id = str(uuid.uuid4())
-        save_path = os.path.join('static/uploads/', file_id + '.pdf')
-        file.save(save_path)
+        file.save(os.path.join('static/uploads/', file_id + '.pdf'))
+        engine.save_file(file_id, file.filename)
 
         session_uploads = session['uploads']
-        session_uploads.append({
-            'id': file_id,
-            'name': filename,
-            'status': 'Processing'
-        })
+        session_uploads.append(file_id)
         session['uploads'] = session_uploads
 
-        # num_pages = engine.get_num_pages(file_id)
-        # if (num_pages <= 15):
-        #     engine.index(file_id, filename, is_short=True)
-        # else:
-            # start multithreading
-        thread = threading.Thread(target=engine.index, args=(file_id, filename, False))
-        thread.start()
+        engine.index(file_id)
         return redirect(url_for('index'))
-        # return redirect(url_for('search', file_id=file_id))
     except Exception as e:
         traceback.print_exc()
         return redirect(url_for('error'))

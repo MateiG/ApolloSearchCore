@@ -20,12 +20,8 @@
             margin: 0;
             padding: 0;
             height: 100vh;
-        }
-
-        .container {
             display: flex;
             flex-direction: column;
-            height: 100vh;
         }
 
         .header {
@@ -117,28 +113,26 @@
 </head>
 
 <body>
-    <div class="container">
-        <div class="header">
-            <a href="{{ url_for('index') }}">Home</a>
-            <a href="/feedback">Feedback</a>
-        </div>
+    <div class="header">
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="/feedback">Feedback</a>
+    </div>
 
-        <div class="body">
-            <div id="pdf-container"></div>
+    <div class="body">
+        <div id="pdf-container"></div>
 
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="Search" />
-                <div id="insight-box">
-                    <details>
-                        <summary>Insights are generated after searching</summary>
-                        <p id="insight-text"></p>
-                    </details>
-                </div>
-                <div id="results-box">
-                    <p id="results-status">Results will appear here</p>
-                    <ol id="results-list">
-                    </ol>
-                </div>
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Search" />
+            <div id="insight-box">
+                <details>
+                    <summary>Insights are generated after searching</summary>
+                    <p id="insight-text"></p>
+                </details>
+            </div>
+            <div id="results-box">
+                <p id="results-status">Results will appear here</p>
+                <ol id="results-list">
+                </ol>
             </div>
         </div>
     </div>
@@ -231,11 +225,10 @@
                 .then(data => {
                     resultStatus.innerHTML = '';
                     resultsList.innerHTML = '';
-
+                    console.log(data['results']);
                     data['results'].forEach(doc => {
                         const listItem = document.createElement('li');
-                        listItem.innerHTML = boldSubstring(doc['text'], doc['h_start'], doc['h_end']);
-                        var searchTerm = doc['text'].substring(doc['h_start'], doc['h_start'] + 10);
+                        listItem.innerHTML = formatResult(doc['text'], doc['keywords']);
                         listItem.addEventListener("click", function () {
                             highlightRegion(doc['page'], doc['box'][0], doc['box'][1], doc['box'][2], doc['box'][3])
                         });
@@ -278,11 +271,11 @@
                 });
         }
 
-        function boldSubstring(str, startIndex, endIndex) {
-            if (startIndex < 0 || endIndex > str.length || startIndex >= endIndex) {
-                return str;
-            }
-            return `${str.substring(0, startIndex)}<b>${str.substring(startIndex, endIndex)}</b>${str.substring(endIndex)}`;
+        function formatResult(text, keywords) {
+            const regex = new RegExp(keywords.join('|'), 'gi');
+            const boldText = text.replace(regex, '<b>$&</b>');
+            const formattedText = boldText.replace(/\n/g, '<br>');
+            return formattedText;
         }
     </script>
 </body>

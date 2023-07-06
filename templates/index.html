@@ -84,6 +84,7 @@
             messageItem.textContent = 'No uploaded files.';
             uploadedFilesList.appendChild(messageItem);
         } else {
+            console.log(sessionUploads);
             sessionUploads.forEach(element => {
                 const listItem = document.createElement('li');
 

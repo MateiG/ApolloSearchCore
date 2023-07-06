@@ -73,39 +73,48 @@ class OCRHandler:
         for b_key in data:
             for p_key in data[b_key]:
                 for l_key in data[b_key][p_key]:
+                    num_tokens = len(data[b_key][p_key][l_key]['text'])
                     text = (' ').join(data[b_key][p_key][l_key]['text'])
                     left = min(data[b_key][p_key][l_key]['left'])
+                    right = data[b_key][p_key][l_key]['left'][num_tokens - 1] + data[b_key][p_key][l_key]['width'][num_tokens - 1]
+                    width = right - left
                     top = min(data[b_key][p_key][l_key]['top'])
-                    width = sum(data[b_key][p_key][l_key]['width']) # - left # plus some amount for last word
                     height = max(data[b_key][p_key][l_key]['height'])
+                    bottom = top + height
 
                     parsed[b_key][p_key][l_key]['text'] = text
                     parsed[b_key][p_key][l_key]['left'] = left
+                    parsed[b_key][p_key][l_key]['right'] = right
                     parsed[b_key][p_key][l_key]['top'] = top
                     parsed[b_key][p_key][l_key]['width'] = width
                     parsed[b_key][p_key][l_key]['height'] = height
+                    parsed[b_key][p_key][l_key]['bottom'] = bottom
         return parsed
 
-    def create_chunks(self, data, page_num, chunk_size=3):
+    def create_chunks(self, data, page_num, chunk_size=3, min_chars=10):
         chunks = []
         for b_key in data:
             for p_key in data[b_key]:
                 p_lines = list(data[b_key][p_key].values())
                 for i in range(0, len(p_lines), chunk_size):
                     chunk_lines = p_lines[i:i+chunk_size]
-                    text = [line['text'] for line in chunk_lines]
-                    left = min([line['left'] for line in chunk_lines])
-                    top = min([line['top'] for line in chunk_lines])
-                    width = max([line['width'] for line in chunk_lines])
-                    height = sum([line['height'] for line in chunk_lines])
+                    num_lines = len(chunk_lines)
+                    text = ('\n').join([line['text'] for line in chunk_lines])
 
-                    chunks.append({
-                        'id': self.chunk_id,
-                        'page': page_num,
-                        'text': (' ').join(text),
-                        'box': [left, top, width, height]
-                    })
-                self.chunk_id += 1
+                    left = min([line['left'] for line in chunk_lines])
+                    right = max([line['right'] for line in chunk_lines])
+                    width = right - left
+                    top = min([line['top'] for line in chunk_lines])
+                    height = chunk_lines[num_lines - 1]['top'] + chunk_lines[num_lines - 1]['height'] - top
+
+                    if (len(text) >= min_chars):
+                        chunks.append({
+                            'id': self.chunk_id,
+                            'page': page_num,
+                            'text': text,
+                            'box': [left, top, width, height]
+                        })
+                        self.chunk_id += 1
         return chunks
 
     def clean_string(self, text):
