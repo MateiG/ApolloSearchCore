@@ -89,8 +89,7 @@ def search():
         index = engine.read(file_id=file_id)
 
         pdf_path = os.path.join('static/uploads/', file_id + '.pdf')
-        filename = index['name']
-        return render_template('search.html', file_id=file_id, filename=filename, pdf_path=pdf_path)
+        return render_template('search.html', file_id=file_id, pdf_path=pdf_path)
     except Exception as e:
         traceback.print_exc()
         return redirect(url_for('error'))
@@ -123,6 +122,7 @@ def insight():
         doc_ids = data['documents']
 
         prediction = engine.insight(file_id, query, doc_ids)
+        # prediction = ''
         return jsonify({'prediction': prediction})
     except Exception as e:
         traceback.print_exc()

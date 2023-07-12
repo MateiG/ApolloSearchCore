@@ -63,11 +63,12 @@ class Engine():
 
         result_indices = self.model_handler.retrieve(corpus, query, top_k)
         results = []
-        print('=============retrieved documents=============')
-        for i in result_indices:
+        for n, i in enumerate(result_indices):
             corpus_doc = corpus[i]
-            print(corpus_doc['text'])
-            keywords = self.model_handler.keywords(query, corpus_doc['text'])
+
+            keywords = []
+            if (n < 5):
+                keywords = self.model_handler.keywords(query, corpus_doc['text'])
 
             result = {
                 'id': corpus_doc['id'],
@@ -79,12 +80,13 @@ class Engine():
             results.append(result)
         return results
 
-    def insight(self, file_id, query, retrieved_ids, context_window=5):
+    def insight(self, file_id, query, retrieved_ids, top_k=5, context_window=1):
         corpus = self.read(file_id)['documents']
         max_index = len(corpus) - 1
 
         context_ids = []
-        for i in retrieved_ids:
+        top_ids = retrieved_ids[:top_k]
+        for i in top_ids:
             context_ids.extend(range(i - context_window, i + context_window))
         context_ids = sorted(list(set(filter(lambda x: (x >= 0) and (x <= max_index), context_ids))))
 

@@ -23,6 +23,8 @@ class ModelHandler():
     INDEX_PATH='index/'
 
     def __init__(self):
+        os.environ['TOKENIZERS_PARALLELISM'] = "true";
+
         self.encoder_tokenizer = AutoTokenizer.from_pretrained(ModelHandler.encoder_save_path)
         self.encoder_model = AutoModelForMaskedLM.from_pretrained(ModelHandler.encoder_save_path)
         self.encoder_model.eval()
