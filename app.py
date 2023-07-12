@@ -73,7 +73,8 @@ def upload():
         session_uploads.append(file_id)
         session['uploads'] = session_uploads
 
-        engine.index(file_id)
+        thread = threading.Thread(target=engine.index, args=(file_id,))
+        thread.start()
         return redirect(url_for('index'))
     except Exception as e:
         traceback.print_exc()
