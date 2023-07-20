@@ -6,17 +6,18 @@ from datetime import datetime
 
 from werkzeug.utils import secure_filename
 
+import faiss
+import numpy as np
 import openai
 
 from utils.pdf_handler import PDFHandler
 from utils.ocr_handler import OCRHandler
 from utils.model_handler import ModelHandler
 
-from pypdf import PdfReader
-
 
 class Engine():
     INDEX_PATH = 'index/'
+    INFO_PATH = 'info/'
     UPLOAD_PATH = 'static/uploads/'
 
     MAX_CHARS = 3800 * 4  # 3800 tokens * ~4 chars/token + 200 for completion. Limit is 4097.
@@ -26,7 +27,7 @@ class Engine():
 
         # self.pdf_handler = PDFHandler()
         self.ocr_handler = OCRHandler()
-        self.model_handler = ModelHandler()
+        self.model = ModelHandler()
 
     def save_file(self, file_id, filename):
         filename = secure_filename(filename)
@@ -39,36 +40,33 @@ class Engine():
             'status': 'Processing'
         }
 
-        self.write(dir=Engine.INDEX_PATH, name=file_id, object=data)
+        self.write_info(name=file_id, object=data)
         return file_id
 
     def index(self, file_id):
-        data = self.read(file_id)
+        info = self.read_info(file_id)
 
         documents = self.ocr_handler.process_pdf(file_id)
         texts = [doc['text'] for doc in documents]
-        embeddings = self.model_handler.list_encode((texts))
-        for i in range(len(texts)):
-            documents[i]['embedding'] = embeddings[i]
+        self.model.create_index(file_id, texts)
         
-        data['text'] = ('\n').join(texts)
-        data['documents'] = documents
-        data['status'] = 'Ready'
-
-        self.write(dir=Engine.INDEX_PATH, name=file_id, object=data)
+        info['text'] = ('\n').join(texts)
+        info['documents'] = documents
+        info['status'] = 'Ready'
+        self.write_info(name=file_id, object=info)
 
     def retrieve(self, file_id, query, top_k=50):
-        corpus = self.read(file_id)['documents']
-        top_k = min(len(corpus), top_k)
+        info = self.read_info(file_id)
+        corpus = info['documents']
 
-        result_indices = self.model_handler.retrieve(corpus, query, top_k)
+        result_indices = self.model.retrieve(file_id, query, top_k)
         results = []
         for n, i in enumerate(result_indices):
             corpus_doc = corpus[i]
 
             keywords = []
             if (n < 5):
-                keywords = self.model_handler.keywords(query, corpus_doc['text'])
+                keywords = self.model.keywords(query, corpus_doc['text'])
 
             result = {
                 'id': corpus_doc['id'],
@@ -81,7 +79,8 @@ class Engine():
         return results
 
     def insight(self, file_id, query, retrieved_ids, top_k=5, context_window=1):
-        corpus = self.read(file_id)['documents']
+        info = self.read_info(file_id)
+        corpus = info['documents']
         max_index = len(corpus) - 1
 
         context_ids = []
@@ -111,18 +110,17 @@ class Engine():
         )
         return completion.choices[0].message.content.strip()
 
-    def write(self, dir: str, name: str, object: dict):
-        save_path = os.path.join(dir, name + '.json')
-        with open(save_path, 'w', encoding='utf-8') as f:
+    def write_info(self, name: str, object: dict):
+        with open('info/' + name + '.json', 'w', encoding='utf-8') as f:
             json.dump(object, f, ensure_ascii=False, indent=4)
 
-    def read(self, file_id):
-        with open(os.path.join('index/', file_id + '.json'), 'r') as f:
+    def read_info(self, file_id):
+        with open('info/' + file_id + '.json', 'r') as f:
             data = json.load(f)
         return data
     
     def get_status(self, file_id):
-        data = self.read(file_id)
+        data = self.read_info(file_id)
         status = {
             'id': data['id'],
             'name': data['name'],

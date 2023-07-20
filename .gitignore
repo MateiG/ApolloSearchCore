@@ -53,6 +53,7 @@ htmlcov/
 
 # Custom Changes
 models/
+info/
 index/
 static/uploads/
 feedback.txt

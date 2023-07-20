@@ -5,3 +5,7 @@
 
 # Ignore the virtual environment
 venv/
+
+index/
+info/
+static/uploads/
