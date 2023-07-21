@@ -11,7 +11,6 @@ class OCRHandler:
 
     def process_pdf(self, file_id):
         print('ocr processing pdf')
-        self.chunk_id = 0
         images = convert_from_path(os.path.join(OCRHandler.UPLOAD_DIR, file_id + '.pdf'))
 
         chunks = []
@@ -24,7 +23,7 @@ class OCRHandler:
             pt_cleaned = self.filter_pt(pt_data)
             pt_extracted = self.extract_pt(pt_cleaned, page_width, page_height)
             pt_parsed = self.parse_pt(pt_extracted)
-            chunks += self.create_chunks(pt_parsed, page_num + 1)
+            chunks += self.create_chunks(pt_parsed,  page_num + 1, len(chunks))
         return chunks
 
     def filter_pt(self, data):
@@ -91,7 +90,8 @@ class OCRHandler:
                     parsed[b_key][p_key][l_key]['bottom'] = bottom
         return parsed
 
-    def create_chunks(self, data, page_num, chunk_size=3, min_chars=10):
+    def create_chunks(self, data, page_num, start_id=0, chunk_size=3, min_chars=10):
+        id = start_id
         chunks = []
         for b_key in data:
             for p_key in data[b_key]:
@@ -109,12 +109,12 @@ class OCRHandler:
 
                 if (len(text) >= min_chars):
                     chunks.append({
-                        'id': self.chunk_id,
+                        'id': id,
                         'page': page_num,
                         'text': text,
                         'box': [left, top, width, height]
                     })
-                    self.chunk_id += 1
+                    id += 1
         return chunks
 
     def clean_string(self, text):

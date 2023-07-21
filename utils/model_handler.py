@@ -94,7 +94,6 @@ class ModelHandler:
 
         q_emb = self.numpy_encode(query)
         results = index.search(q_emb, top_k)
-        print(results)
         indices = results[1].flatten()
 
         # reranked_indices = self.rerank(query, texts, indices.tolist())

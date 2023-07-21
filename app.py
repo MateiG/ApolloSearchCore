@@ -47,13 +47,13 @@ def index():
 @app.route("/upload", methods=["POST"])
 def upload():
     try:
-        file = request.files["file"]
-        file_id = str(uuid.uuid4())
-        file.save(os.path.join("static/uploads/", file_id + ".pdf"))
-        engine.save_file(file_id, file.filename)
+        for file in request.files.getlist("file"):
+            file_id = str(uuid.uuid4())
+            file.save(os.path.join("static/uploads/", file_id + ".pdf"))
+            engine.save_file(file_id, file.filename)
 
-        thread = threading.Thread(target=engine.index, args=(file_id,))
-        thread.start()
+            thread = threading.Thread(target=engine.index, args=(file_id,))
+            thread.start()
         return redirect(url_for("index"))
     except Exception as e:
         traceback.print_exc()

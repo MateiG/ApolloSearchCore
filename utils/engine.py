@@ -78,7 +78,7 @@ class Engine():
             results.append(result)
         return results
 
-    def insight(self, file_id, query, retrieved_ids, top_k=5, context_window=1):
+    def insight(self, file_id, query, retrieved_ids, top_k=7, context_window=2):
         info = self.read_info(file_id)
         corpus = info['documents']
         max_index = len(corpus) - 1
