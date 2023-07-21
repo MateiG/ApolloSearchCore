@@ -142,15 +142,15 @@ def error():
 
 
 if __name__ == "__main__":
+    os.makedirs("info/", exist_ok=True)
+    os.makedirs("index/", exist_ok=True)
+    os.makedirs("static/uploads/", exist_ok=True)
+
     for f in os.listdir("info/"):
         os.remove("info/" + f)
     for f in os.listdir("index/"):
         os.remove("index/" + f)
     for f in os.listdir("static/uploads/"):
         os.remove("static/uploads/" + f)
-
-    os.makedirs("info/", exist_ok=True)
-    os.makedirs("index/", exist_ok=True)
-    os.makedirs("static/uploads/", exist_ok=True)
 
     app.run(host="0.0.0.0", port="5000", debug=True)
