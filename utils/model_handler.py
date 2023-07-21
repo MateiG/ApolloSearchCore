@@ -21,7 +21,7 @@ import faiss
 import string
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-import spacy
+import en_core_web_md
 
 
 class ModelHandler:
@@ -54,7 +54,7 @@ class ModelHandler:
         self.id2token = {
             id: token for token, id in self.encoder_tokenizer.get_vocab().items()
         }
-        self.nlp = spacy.load("models/en_core_web_md/")
+        self.nlp = en_core_web_md.load()
 
     def numpy_encode(self, texts, chunk_size=50):
         if isinstance(texts, str):
