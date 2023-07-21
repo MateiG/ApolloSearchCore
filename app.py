@@ -4,7 +4,7 @@ import uuid
 import threading
 import traceback
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from utils.engine import Engine
 
@@ -17,20 +17,12 @@ engine = Engine()
 @app.route("/clear")
 def clear():
     try:
-        if "uploads" not in session:
-            session["uploads"] = []
-        for file_id in session["uploads"]:
-            upload_path = os.path.join("static/uploads/", file_id + ".pdf")
-            info_path = os.path.join("info/", file_id + ".json")
-            index_path = os.path.join("index/", file_id + ".npy")
-
-            if os.path.isfile(upload_path):
-                os.remove(upload_path)
-            if os.path.isfile(info_path):
-                os.remove(info_path)
-            if os.path.isfile(index_path):
-                os.remove(index_path)
-        session.clear()
+        for f in os.listdir("info/"):
+            os.remove("info/" + f)
+        for f in os.listdir("index/"):
+            os.remove("index/" + f)
+        for f in os.listdir("static/uploads/"):
+            os.remove("static/uploads/" + f)
     except Exception as e:
         traceback.print_exc()
         return redirect(url_for("error"))
@@ -41,15 +33,11 @@ def clear():
 @app.route("/")
 def index():
     try:
-        if "uploads" not in session:
-            session["uploads"] = []
-
         states = []
-        for i in range(len(session["uploads"])):
-            file_id = session["uploads"][i]
-            if (os.path.isfile("info/" + file_id + ".json")):
-                file_status = engine.get_status(file_id)
-                states.append(file_status)
+        for f in os.listdir("info/"):
+            file_id = f.replace(".json", "")
+            file_status = engine.get_status(file_id)
+            states.append(file_status)
         return render_template("index.html", uploads=states)
     except Exception as e:
         traceback.print_exc()
@@ -63,10 +51,6 @@ def upload():
         file_id = str(uuid.uuid4())
         file.save(os.path.join("static/uploads/", file_id + ".pdf"))
         engine.save_file(file_id, file.filename)
-
-        session_uploads = session["uploads"]
-        session_uploads.append(file_id)
-        session["uploads"] = session_uploads
 
         thread = threading.Thread(target=engine.index, args=(file_id,))
         thread.start()
@@ -145,12 +129,5 @@ if __name__ == "__main__":
     os.makedirs("info/", exist_ok=True)
     os.makedirs("index/", exist_ok=True)
     os.makedirs("static/uploads/", exist_ok=True)
-
-    for f in os.listdir("info/"):
-        os.remove("info/" + f)
-    for f in os.listdir("index/"):
-        os.remove("index/" + f)
-    for f in os.listdir("static/uploads/"):
-        os.remove("static/uploads/" + f)
 
     app.run(host="0.0.0.0", port="5000", debug=True)
