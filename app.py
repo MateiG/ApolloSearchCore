@@ -8,9 +8,6 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 
 from utils.engine import Engine
 
-os.makedirs("info/")
-os.makedirs("index/")
-os.makedirs("static/uploads/")
 
 app = Flask(__name__)
 app.secret_key = "SUPER_SECRET_KEY"
@@ -50,9 +47,9 @@ def index():
         states = []
         for i in range(len(session["uploads"])):
             file_id = session["uploads"][i]
-            file_status = engine.get_status(file_id)
-            states.append(file_status)
-
+            if (os.path.isfile("info/" + file_id + ".json")):
+                file_status = engine.get_status(file_id)
+                states.append(file_status)
         return render_template("index.html", uploads=states)
     except Exception as e:
         traceback.print_exc()
@@ -142,3 +139,18 @@ def submit_feedback():
 @app.route("/error")
 def error():
     return render_template("error.html")
+
+
+if __name__ == "__main__":
+    for f in os.listdir("info/"):
+        os.remove("info/" + f)
+    for f in os.listdir("index/"):
+        os.remove("index/" + f)
+    for f in os.listdir("static/uploads/"):
+        os.remove("static/uploads/" + f)
+
+    os.makedirs("info/", exist_ok=True)
+    os.makedirs("index/", exist_ok=True)
+    os.makedirs("static/uploads/", exist_ok=True)
+
+    app.run(host="0.0.0.0", port="5000", debug=True)
