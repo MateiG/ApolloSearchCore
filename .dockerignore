@@ -3,7 +3,11 @@
 *.pyc
 *.pyo
 
-# Ignore the virtual environment
+.dockerignore
+.git/
+.gitignore
+.vscode
+Dockerfile
 venv/
 
 index/
