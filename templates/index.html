@@ -59,12 +59,13 @@
 
         <div class="body">
             <h1>What is ApolloSearch?</h1>
-            <p>ApolloSearch is a tool that lets you search any PDF using natural language (like Googling it).</p>
-            <p>Each page takes about 3 seconds to index. Please wait for the entire document to finish processing.</p>
+            <p>ApolloSearch is a tool that lets you search PDF documents using natural language (like Googling it).</p>
+            <p>You can upload any number of documents. Each page takes about 3 seconds to index.</p>
             <p>The upload limit is 100 MB, with no limit on number of pages. To delete everything you've uploaded, click
-                <a href="{{ url_for('clear') }}">here</a>.</p>
-            
-                <h1>Upload a PDF file (please wait for the page to load completely once you've uploaded a file)</h1>
+                <a href="{{ url_for('clear') }}">here</a>.
+            </p>
+
+            <h1>Upload PDF files</h1>
             <form action="/upload" method="POST" enctype="multipart/form-data">
                 <input type="file" name="file" accept=".pdf" multiple>
                 <input type="submit" value="Upload">

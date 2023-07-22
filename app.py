@@ -70,7 +70,6 @@ def search():
         traceback.print_exc()
         return redirect(url_for("error"))
 
-
 @app.route("/query")
 def query():
     try:
