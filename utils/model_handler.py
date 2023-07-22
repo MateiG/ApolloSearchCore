@@ -56,7 +56,7 @@ class ModelHandler:
         }
         self.nlp = en_core_web_md.load()
 
-    def numpy_encode(self, texts, chunk_size=50):
+    def numpy_encode(self, texts, chunk_size=25):
         if isinstance(texts, str):
             texts = [texts]
 
